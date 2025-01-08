@@ -1,34 +1,139 @@
-import React, { useState } from 'react';
-import {
-  Dropdown,
-  Input,
-  Menu,
-  MenuButton,
-  MenuItem,
-  inputClasses,
-} from '@mui/base';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Input, inputClasses } from '@mui/base';
 import MainLayout from '@src/layouts/MainLayout';
-import { BiCoin } from 'react-icons/bi';
+import Select, {
+  components,
+  SingleValue,
+  SingleValueProps,
+} from 'react-select';
+
 import { CgSwap } from 'react-icons/cg';
 import { StyledButtonBase, StyledButtonSubmit } from '@src/components/Button';
 import styled from 'styled-components';
+import { validatePositiveNumber } from '@src/utils/validateNumber';
+import { SwapKey } from '@src/constants/swap';
+import { formatDecimal } from '@src/utils/format';
+import { priceService } from '@src/services/priceService';
+import { PriceModel } from '@src/models/price.model';
+import { IMAGE_URL } from '@src/constants/image';
+import { BiInfoCircle } from 'react-icons/bi';
+import { Unstable_Popup as Popup } from '@mui/base/Unstable_Popup';
 
 function App() {
-  const [isRotated, setIsRotated] = useState(false);
+  const [anchor, setAnchor] = React.useState<null | HTMLElement>(null);
 
-  const createHandleMenuClick = (menuItem: string) => {
-    return () => {
-      console.log(`Clicked on ${menuItem}`);
-    };
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchor(anchor ? null : event.currentTarget);
   };
 
-  const handleAfterRippleEffect = () => {
+  const open = Boolean(anchor);
+  const id = open ? 'simple-popper' : undefined;
+
+  const [priceData, setPriceData] = useState<PriceModel[]>([]);
+  const [priceDataLoading, setPriceDataLoading] = useState(false);
+  const [priceDataError, setPriceDataError] = useState<Error | null>(null);
+  const [isRotated, setIsRotated] = useState(false);
+  const [ammount, setAmmount] = useState<{
+    from: {
+      value: number;
+      label: string;
+    };
+    to: {
+      value: number;
+      label: string;
+    };
+  }>({
+    from: {
+      value: 0,
+      label: '',
+    },
+    to: {
+      value: 0,
+      label: '',
+    },
+  });
+  const priceDataFinal = useMemo(() => {
+    return priceData.map(
+      (item) => ({
+        value: item.price,
+        label: item.currency,
+      }),
+      [priceData]
+    );
+  }, [priceData]);
+  const getPricesData = async () => {
+    try {
+      setPriceDataLoading(true);
+      const res = await priceService.getPrices();
+      if (res.data) {
+        setPriceData(res.data);
+        return res.data;
+      }
+    } catch (error) {
+      setPriceDataError(error as Error);
+    } finally {
+      setPriceDataLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getPricesData();
+  }, []);
+
+  useEffect(() => {
+    if (priceData.length > 0) {
+      setAmmount({
+        from: {
+          value: priceData[0].price,
+          label: priceData[0].currency,
+        },
+        to: {
+          value: priceData[1].price,
+          label: priceData[1].currency,
+        },
+      });
+    }
+  }, [priceData]);
+
+  const _onSelectCurrency = (
+    value: SingleValue<{ value: number; label: string }>,
+    key: SwapKey
+  ) => {
+    console.log(value);
+    setAmmount((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const _onSwap = () => {
+    setIsRotated((prevIsRotated) => !prevIsRotated);
+    setAmmount((prev) => ({
+      from: prev.to,
+      to: prev.from,
+    }));
+  };
+
+  const _onChangeAmmount = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    key: SwapKey
+  ) => {
+    const amountValue = e.target.value;
+    if (validatePositiveNumber(amountValue)) {
+      console.log(Number(amountValue));
+      setAmmount((prev) => ({
+        ...prev,
+        [key]: {
+          value: Number(amountValue),
+          label: prev[key].label,
+        },
+      }));
+    }
+  };
+
+  const _onConfirmSwap = () => {
     console.log('Ripple effect completed');
     // Add your function logic here
-  };
-  const _onSwap = () => {
-    console.log('Swap');
-    setIsRotated((prevIsRotated) => !prevIsRotated);
   };
   return (
     <MainLayout>
@@ -43,26 +148,74 @@ function App() {
                 <h3 className="title">Amount to send</h3>
               </div>
               <StyledFormGroup className="form-group">
-                <Dropdown className="form-group__select">
-                  <MenuButton className="btn btn-select">
-                    <BiCoin />
-                    <span>My account</span>
-                  </MenuButton>
-                  <Menu slots={{ listbox: 'ul' }}>
-                    <MenuItem onClick={createHandleMenuClick('Profile')}>
-                      Profile
-                    </MenuItem>
-                    <MenuItem
-                      onClick={createHandleMenuClick('Language settings')}
-                    >
-                      Language settings
-                    </MenuItem>
-                    <MenuItem onClick={createHandleMenuClick('Log out')}>
-                      Log out
-                    </MenuItem>
-                  </Menu>
-                </Dropdown>
-                <Input className="form-group__input" />
+                <Select
+                  onChange={(value) => _onSelectCurrency(value, SwapKey.FROM)}
+                  value={ammount.from}
+                  isSearchable={true}
+                  styles={{
+                    option: (base) => ({
+                      ...base,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      minWidth: '50px',
+                      maxWidth: '50px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }),
+                  }}
+                  components={{
+                    Option: ({ children, ...props }) => {
+                      return (
+                        <components.Option {...props}>
+                          <img
+                            src={`${IMAGE_URL}/${props.data.label}.svg`}
+                            alt={props.data.label}
+                            width={20}
+                            height={20}
+                          />
+                          {children}
+                        </components.Option>
+                      );
+                    },
+                    SingleValue: ({ children, ...props }) => {
+                      return (
+                        <components.SingleValue {...props}>
+                          <img
+                            src={`${IMAGE_URL}/${props.data.label}.svg`}
+                            alt={props.data.label}
+                            width={20}
+                            height={20}
+                          />
+                          {children}
+                        </components.SingleValue>
+                      );
+                    },
+                  }}
+                  options={priceDataFinal}
+                />
+                <Input
+                  className="form-group__input"
+                  onChange={(e) => _onChangeAmmount(e, SwapKey.FROM)}
+                  value={ammount.from.value}
+                  onKeyDown={(e) => {
+                    if (e.key === '-') {
+                      e.preventDefault();
+                    }
+                  }}
+                  type="number"
+                  inputMode="decimal"
+                />
               </StyledFormGroup>
             </StyledCard>
             <StyledButtonSwap
@@ -76,41 +229,105 @@ function App() {
                 <h3 className="title">Amount to receive</h3>
               </div>
               <StyledFormGroup className="form-group">
-                <Dropdown className="form-group__select">
-                  <MenuButton className="btn btn-select">
-                    <BiCoin />
-                    <span>My account</span>
-                  </MenuButton>
-                  <Menu slots={{ listbox: 'ul' }}>
-                    <MenuItem onClick={createHandleMenuClick('Profile')}>
-                      Profile
-                    </MenuItem>
-                    <MenuItem
-                      onClick={createHandleMenuClick('Language settings')}
-                    >
-                      Language settings
-                    </MenuItem>
-                    <MenuItem onClick={createHandleMenuClick('Log out')}>
-                      Log out
-                    </MenuItem>
-                  </Menu>
-                </Dropdown>
-                <Input className="form-group__input" />
+                <Select
+                  onChange={(value) => _onSelectCurrency(value, SwapKey.TO)}
+                  isSearchable={true}
+                  value={ammount.to}
+                  styles={{
+                    option: (base) => ({
+                      ...base,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      minWidth: '50px',
+                      maxWidth: '50px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }),
+                  }}
+                  components={{
+                    Option: ({ children, ...props }) => {
+                      return (
+                        <components.Option {...props}>
+                          <img
+                            src={`${IMAGE_URL}/${props.data.label}.svg`}
+                            alt={props.data.label}
+                            width={20}
+                            height={20}
+                          />
+                          {children}
+                        </components.Option>
+                      );
+                    },
+                    SingleValue: ({ children, ...props }) => {
+                      return (
+                        <components.SingleValue {...props}>
+                          <img
+                            src={`${IMAGE_URL}/${props.data.label}.svg`}
+                            alt={props.data.label}
+                            width={20}
+                            height={20}
+                          />
+                          {children}
+                        </components.SingleValue>
+                      );
+                    },
+                  }}
+                  options={priceDataFinal}
+                />
+                <Input
+                  className="form-group__input"
+                  onChange={(e) => _onChangeAmmount(e, SwapKey.TO)}
+                  value={ammount.to.value}
+                  onKeyDown={(e) => {
+                    if (e.key === '-') {
+                      e.preventDefault();
+                    }
+                  }}
+                  type="number"
+                  inputMode="decimal"
+                />
               </StyledFormGroup>
             </StyledCard>
           </StyledSwapFormCards>
           <StyledSubmitContainer className="swap-form__submit">
-            <div className="swap-form__submit-info">
-              <p className="info">
-                <span>1 ETH </span> = <span>1000 USD</span>
-              </p>
-            </div>
             <StyledButtonSubmit
               className="btn btn-submit"
-              onClick={handleAfterRippleEffect}
+              onClick={_onConfirmSwap}
             >
               Confirm swap
             </StyledButtonSubmit>
+            <StyledSwapFormInfo className="swap-form__submit-info">
+              <StyledSwapFormInfoButton
+                aria-describedby={id}
+                onClick={handleClick}
+              >
+                <BiInfoCircle />
+              </StyledSwapFormInfoButton>
+              <Popup open={open} anchor={anchor} id={id}>
+                <p>Test</p>
+              </Popup>
+              <p className="info">
+                <span>
+                  {ammount.from.label}/{ammount.to.label}:{' '}
+                </span>
+                <span>
+                  {formatDecimal(Number(ammount.from.value))}{' '}
+                  {ammount.from.label} ={' '}
+                  {formatDecimal(Number(ammount.to.value))} {ammount.to.label}
+                </span>
+              </p>
+            </StyledSwapFormInfo>
           </StyledSubmitContainer>
         </StyledSwapForm>
       </div>
@@ -120,13 +337,22 @@ function App() {
 
 const StyledSwapForm = styled.div`
   width: 100%;
-  /* max-width: 500px; */
   margin: 0 auto;
   border: 1px solid black;
   padding: 20px;
   border-radius: 12px;
   position: relative;
   background-color: #ededed;
+`;
+
+const StyledSwapFormInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const StyledSwapFormInfoButton = styled(Button)`
+  cursor: pointer;
 `;
 
 const StyledSwapFormTitle = styled.div`
@@ -259,7 +485,6 @@ const StyledFormGroup = styled.div`
   height: var(--input-height);
   border-radius: 12px;
   background-color: white;
-  overflow: hidden;
   transition: border-color 0.3s ease-in-out;
   &:has(.${inputClasses.focused}) {
     border-color: #4a90e2;
@@ -286,6 +511,13 @@ const StyledFormGroup = styled.div`
       }
     }
   }
+`;
+
+const StyledOption = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 10px;
 `;
 
 export default App;

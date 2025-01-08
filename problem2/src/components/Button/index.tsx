@@ -39,7 +39,6 @@ const RippleButton: React.FC<RippleButtonProps> = ({
     }
 
     button.appendChild(circle);
-    console.log('circle', circle);
     // Add event listener for animation end
     circle.addEventListener('animationend', onClick);
   };
@@ -70,7 +69,7 @@ export const StyledButtonBase = styled(RippleButton)`
 
   @keyframes ripple-animation {
     to {
-      transform: scale(7);
+      transform: scale(5);
       opacity: 0;
     }
   }
