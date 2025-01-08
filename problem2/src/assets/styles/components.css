@@ -1,0 +1,8 @@
+.btn {
+  &.--circle {
+    border-radius: 100%;
+    overflow: hidden;
+    aspect-ratio: 1/1;
+  }
+
+}
