@@ -1,0 +1,12 @@
+@import "./reset.css";
+@import "./fonts.css";
+@import "./variables.css";
+
+html {
+  font-size: 62.5%;
+  font-family: var(--ff-regular);
+}
+
+body {
+  max-width: var(--max-width-page);
+}
