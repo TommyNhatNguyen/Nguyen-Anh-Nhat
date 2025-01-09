@@ -1,11 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Input, inputClasses } from '@mui/base';
 import MainLayout from '@src/layouts/MainLayout';
-import Select, {
-  components,
-  SingleValue,
-  SingleValueProps,
-} from 'react-select';
+import Select, { components, SingleValue } from 'react-select';
 
 import { CgSwap } from 'react-icons/cg';
 import { StyledButtonBase, StyledButtonSubmit } from '@src/components/Button';
@@ -20,121 +16,145 @@ import { BiInfoCircle } from 'react-icons/bi';
 import { Unstable_Popup as Popup } from '@mui/base/Unstable_Popup';
 
 function App() {
-  const [anchor, setAnchor] = React.useState<null | HTMLElement>(null);
+  const [popupAnchor, setPopupAnchor] = React.useState<null | HTMLElement>(null);
+  const [currencyData, setCurrencyData] = useState<PriceModel[]>([]);
+  const [isCurrencyDataLoading, setIsCurrencyDataLoading] = useState(false);
+  const [currencyDataError, setCurrencyDataError] = useState<Error | null>(null);
+  const [isSwapButtonRotated, setIsSwapButtonRotated] = useState(false);
+  const [selectedCurrencies, setSelectedCurrencies] = useState<{
+    from: { value: number; label: string; };
+    to: { value: number; label: string; };
+  }>({ from: { value: 0, label: '' }, to: { value: 0, label: '' } });
+  const [conversionResult, setConversionResult] = useState<{ from: number; to: number; }>({ from: 0, to: 0 });
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchor(anchor ? null : event.currentTarget);
+  const _fetchCurrencyData = async () => {
+    try {
+      setIsCurrencyDataLoading(true);
+      const response = await priceService.getPrices();
+      if (response.data) {
+        setCurrencyData(response.data);
+        return response.data;
+      }
+    } catch (error) {
+      setCurrencyDataError(error as Error);
+    } finally {
+      setIsCurrencyDataLoading(false);
+    }
   };
 
-  const open = Boolean(anchor);
-  const id = open ? 'simple-popper' : undefined;
+  useEffect(() => {
+    _fetchCurrencyData();
+  }, []);
 
-  const [priceData, setPriceData] = useState<PriceModel[]>([]);
-  const [priceDataLoading, setPriceDataLoading] = useState(false);
-  const [priceDataError, setPriceDataError] = useState<Error | null>(null);
-  const [isRotated, setIsRotated] = useState(false);
-  const [ammount, setAmmount] = useState<{
-    from: {
-      value: number;
-      label: string;
-    };
-    to: {
-      value: number;
-      label: string;
-    };
-  }>({
-    from: {
-      value: 0,
-      label: '',
-    },
-    to: {
-      value: 0,
-      label: '',
-    },
-  });
-  const priceDataFinal = useMemo(() => {
-    return priceData.map(
+  const currencyOptions = useMemo(() => {
+    return currencyData.map(
       (item) => ({
         value: item.price,
         label: item.currency,
       }),
-      [priceData]
+      [currencyData]
     );
-  }, [priceData]);
-  const getPricesData = async () => {
-    try {
-      setPriceDataLoading(true);
-      const res = await priceService.getPrices();
-      if (res.data) {
-        setPriceData(res.data);
-        return res.data;
-      }
-    } catch (error) {
-      setPriceDataError(error as Error);
-    } finally {
-      setPriceDataLoading(false);
-    }
-  };
+  }, [currencyData]);
 
   useEffect(() => {
-    getPricesData();
-  }, []);
-
-  useEffect(() => {
-    if (priceData.length > 0) {
-      setAmmount({
+    if (currencyData.length > 0) {
+      setSelectedCurrencies({
         from: {
-          value: priceData[0].price,
-          label: priceData[0].currency,
+          value: currencyData[0].price,
+          label: currencyData[0].currency,
         },
         to: {
-          value: priceData[1].price,
-          label: priceData[1].currency,
+          value: currencyData[1].price,
+          label: currencyData[1].currency,
         },
       });
     }
-  }, [priceData]);
+  }, [currencyData]);
 
-  const _onSelectCurrency = (
+  const _handlePopupClick = (event: React.MouseEvent<HTMLElement>) => {
+    setPopupAnchor(popupAnchor ? null : event.currentTarget);
+  };
+
+  const _handleCurrencySelect = (
     value: SingleValue<{ value: number; label: string }>,
     key: SwapKey
   ) => {
-    console.log(value);
-    setAmmount((prev) => ({
+    setSelectedCurrencies((prev) => ({
       ...prev,
       [key]: value,
     }));
+    _convertCurrency(
+      conversionResult[key === SwapKey.FROM ? SwapKey.TO : SwapKey.FROM],
+      key === SwapKey.FROM ? SwapKey.TO : SwapKey.FROM,
+      key === SwapKey.FROM ? value?.value || 0 : selectedCurrencies.from.value,
+      key === SwapKey.TO ? value?.value || 0 : selectedCurrencies.to.value
+    );
   };
 
-  const _onSwap = () => {
-    setIsRotated((prevIsRotated) => !prevIsRotated);
-    setAmmount((prev) => ({
+  const _handleSwap = () => {
+    setIsSwapButtonRotated((prev) => !prev);
+    setSelectedCurrencies((prev) => ({
       from: prev.to,
       to: prev.from,
     }));
+    _convertCurrency(
+      conversionResult.from,
+      SwapKey.FROM,
+      selectedCurrencies.to.value,
+      selectedCurrencies.from.value
+    );
   };
 
-  const _onChangeAmmount = (
+  const _convertCurrency = (
+    amount: number,
+    key: SwapKey,
+    fromPrice: number,
+    toPrice: number
+  ) => {
+    if (key === SwapKey.FROM) {
+      setConversionResult({
+        from: amount,
+        to: (amount * fromPrice) / toPrice,
+      });
+    } else {
+      setConversionResult({
+        from: (amount * toPrice) / fromPrice,
+        to: amount,
+      });
+    }
+  };
+
+  const _handleAmountChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     key: SwapKey
   ) => {
     const amountValue = e.target.value;
     if (validatePositiveNumber(amountValue)) {
-      console.log(Number(amountValue));
-      setAmmount((prev) => ({
-        ...prev,
-        [key]: {
-          value: Number(amountValue),
-          label: prev[key].label,
-        },
-      }));
+      _convertCurrency(
+        Number(amountValue),
+        key,
+        selectedCurrencies.from.value,
+        selectedCurrencies.to.value
+      );
     }
   };
 
-  const _onConfirmSwap = () => {
+  const _handleConfirmSwap = () => {
     console.log('Ripple effect completed');
     // Add your function logic here
   };
+
+  // Function to prevent not allowed characters
+  const _preventNotAllowedCharacters = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const notAllowedKeys = ['-'];
+    if (notAllowedKeys.includes(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const open = Boolean(popupAnchor);
+  const id = open ? 'simple-popper' : undefined;
+
   return (
     <MainLayout>
       <div className="container">
@@ -149,8 +169,8 @@ function App() {
               </div>
               <StyledFormGroup className="form-group">
                 <Select
-                  onChange={(value) => _onSelectCurrency(value, SwapKey.FROM)}
-                  value={ammount.from}
+                  onChange={(value) => _handleCurrencySelect(value, SwapKey.FROM)}
+                  value={selectedCurrencies.from}
                   isSearchable={true}
                   styles={{
                     option: (base) => ({
@@ -202,25 +222,21 @@ function App() {
                       );
                     },
                   }}
-                  options={priceDataFinal}
+                  options={currencyOptions}
                 />
                 <Input
                   className="form-group__input"
-                  onChange={(e) => _onChangeAmmount(e, SwapKey.FROM)}
-                  value={ammount.from.value}
-                  onKeyDown={(e) => {
-                    if (e.key === '-') {
-                      e.preventDefault();
-                    }
-                  }}
+                  onChange={(e) => _handleAmountChange(e, SwapKey.FROM)}
+                  value={conversionResult.from}
+                  onKeyDown={_preventNotAllowedCharacters}
                   type="number"
                   inputMode="decimal"
                 />
               </StyledFormGroup>
             </StyledCard>
             <StyledButtonSwap
-              className={`btn btn-swap --circle ${isRotated ? 'rotated' : ''}`}
-              onClick={_onSwap}
+              className={`btn btn-swap --circle ${isSwapButtonRotated ? 'rotated' : ''}`}
+              onClick={_handleSwap}
             >
               <CgSwap />
             </StyledButtonSwap>
@@ -230,9 +246,9 @@ function App() {
               </div>
               <StyledFormGroup className="form-group">
                 <Select
-                  onChange={(value) => _onSelectCurrency(value, SwapKey.TO)}
+                  onChange={(value) => _handleCurrencySelect(value, SwapKey.TO)}
                   isSearchable={true}
-                  value={ammount.to}
+                  value={selectedCurrencies.to}
                   styles={{
                     option: (base) => ({
                       ...base,
@@ -283,17 +299,13 @@ function App() {
                       );
                     },
                   }}
-                  options={priceDataFinal}
+                  options={currencyOptions}
                 />
                 <Input
                   className="form-group__input"
-                  onChange={(e) => _onChangeAmmount(e, SwapKey.TO)}
-                  value={ammount.to.value}
-                  onKeyDown={(e) => {
-                    if (e.key === '-') {
-                      e.preventDefault();
-                    }
-                  }}
+                  onChange={(e) => _handleAmountChange(e, SwapKey.TO)}
+                  value={conversionResult.to}
+                  onKeyDown={_preventNotAllowedCharacters}
                   type="number"
                   inputMode="decimal"
                 />
@@ -303,28 +315,33 @@ function App() {
           <StyledSubmitContainer className="swap-form__submit">
             <StyledButtonSubmit
               className="btn btn-submit"
-              onClick={_onConfirmSwap}
+              onClick={_handleConfirmSwap}
             >
               Confirm swap
             </StyledButtonSubmit>
             <StyledSwapFormInfo className="swap-form__submit-info">
               <StyledSwapFormInfoButton
                 aria-describedby={id}
-                onClick={handleClick}
+                onClick={_handlePopupClick}
               >
                 <BiInfoCircle />
               </StyledSwapFormInfoButton>
-              <Popup open={open} anchor={anchor} id={id}>
+              <Popup open={open} anchor={popupAnchor} id={id}>
                 <p>Test</p>
               </Popup>
               <p className="info">
                 <span>
-                  {ammount.from.label}/{ammount.to.label}:{' '}
+                  {selectedCurrencies.from.label}/{selectedCurrencies.to.label}:{' '}
                 </span>
                 <span>
-                  {formatDecimal(Number(ammount.from.value))}{' '}
-                  {ammount.from.label} ={' '}
-                  {formatDecimal(Number(ammount.to.value))} {ammount.to.label}
+                  {formatDecimal(
+                    Number(selectedCurrencies.from.value) / Number(selectedCurrencies.from.value)
+                  )}{' '}
+                  {selectedCurrencies.from.label} ={' '}
+                  {formatDecimal(
+                    Number(selectedCurrencies.from.value) / Number(selectedCurrencies.to.value)
+                  )}{' '}
+                  {selectedCurrencies.to.label}
                 </span>
               </p>
             </StyledSwapFormInfo>

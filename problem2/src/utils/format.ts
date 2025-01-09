@@ -1,3 +1,3 @@
 export function formatDecimal(value: number) {
-  return value.toFixed(2);
+  return value.toFixed(5);
 }
