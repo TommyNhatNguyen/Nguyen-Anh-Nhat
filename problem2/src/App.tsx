@@ -1,8 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Input, inputClasses } from '@mui/base';
+import {
+  Button,
+  ClickAwayListener,
+  Input,
+  inputClasses,
+  Modal,
+} from '@mui/base';
 import MainLayout from '@src/layouts/MainLayout';
 import Select, { components, SingleValue } from 'react-select';
-
 import { CgSwap } from 'react-icons/cg';
 import { StyledButtonBase, StyledButtonSubmit } from '@src/components/Button';
 import styled from 'styled-components';
@@ -13,19 +18,48 @@ import { priceService } from '@src/services/priceService';
 import { PriceModel } from '@src/models/price.model';
 import { IMAGE_URL } from '@src/constants/image';
 import { BiInfoCircle } from 'react-icons/bi';
-import { Unstable_Popup as Popup } from '@mui/base/Unstable_Popup';
+import LoadingComponent, {
+  LoadingComponentWrapper,
+} from '@src/components/LoadingComponent';
+import loader from '@src/assets/images/loader.json';
+import moment from 'moment';
+import success from '@src/assets/images/success.json';
+import { Player } from '@lottiefiles/react-lottie-player';
 
 function App() {
-  const [popupAnchor, setPopupAnchor] = React.useState<null | HTMLElement>(null);
+  const [isOpenModalConfirm, setIsOpenModalConfirm] = useState(false);
+  const [popupAnchor, setPopupAnchor] = useState<boolean>(false);
   const [currencyData, setCurrencyData] = useState<PriceModel[]>([]);
   const [isCurrencyDataLoading, setIsCurrencyDataLoading] = useState(false);
-  const [currencyDataError, setCurrencyDataError] = useState<Error | null>(null);
+  const [currencyDataError, setCurrencyDataError] = useState<Error | null>(
+    null
+  );
+  const [isConfirmSwapLoading, setIsConfirmSwapLoading] = useState(false);
+  const [isConfirmSwapSuccess, setIsConfirmSwapSuccess] = useState(false);
+  const [confirmSwapError, setConfirmSwapError] = useState<{
+    from: string;
+    to: string;
+  }>({ from: '', to: '' });
   const [isSwapButtonRotated, setIsSwapButtonRotated] = useState(false);
   const [selectedCurrencies, setSelectedCurrencies] = useState<{
-    from: { value: number; label: string; };
-    to: { value: number; label: string; };
-  }>({ from: { value: 0, label: '' }, to: { value: 0, label: '' } });
-  const [conversionResult, setConversionResult] = useState<{ from: number; to: number; }>({ from: 0, to: 0 });
+    from: { value: number; label: string; date: string };
+    to: { value: number; label: string; date: string };
+  }>({
+    from: { value: 0, label: '', date: '' },
+    to: { value: 0, label: '', date: '' },
+  });
+  const [conversionResult, setConversionResult] = useState<{
+    from: number;
+    to: number;
+  }>({ from: 0, to: 0 });
+
+  const _onCloseModalConfirm = () => {
+    setIsOpenModalConfirm(false);
+  };
+
+  const _onOpenModalConfirm = () => {
+    setIsOpenModalConfirm(true);
+  };
 
   const _fetchCurrencyData = async () => {
     try {
@@ -38,7 +72,10 @@ function App() {
     } catch (error) {
       setCurrencyDataError(error as Error);
     } finally {
+      // Fake loading
+      // setTimeout(() => {
       setIsCurrencyDataLoading(false);
+      // }, 1000);
     }
   };
 
@@ -51,6 +88,7 @@ function App() {
       (item) => ({
         value: item.price,
         label: item.currency,
+        date: moment(item.date).format('DD/MM/YYYY'),
       }),
       [currencyData]
     );
@@ -62,21 +100,23 @@ function App() {
         from: {
           value: currencyData[0].price,
           label: currencyData[0].currency,
+          date: moment(currencyData[0].date).format('DD/MM/YYYY'),
         },
         to: {
           value: currencyData[1].price,
           label: currencyData[1].currency,
+          date: moment(currencyData[1].date).format('DD/MM/YYYY'),
         },
       });
     }
   }, [currencyData]);
 
-  const _handlePopupClick = (event: React.MouseEvent<HTMLElement>) => {
-    setPopupAnchor(popupAnchor ? null : event.currentTarget);
+  const _handlePopupToggle = () => {
+    setPopupAnchor((prev) => !prev);
   };
 
   const _handleCurrencySelect = (
-    value: SingleValue<{ value: number; label: string }>,
+    value: SingleValue<{ value: number; label: string; date: string }>,
     key: SwapKey
   ) => {
     setSelectedCurrencies((prev) => ({
@@ -137,26 +177,82 @@ function App() {
         selectedCurrencies.to.value
       );
     }
+    setConfirmSwapError({
+      from: '',
+      to: '',
+    });
+  };
+
+  const _onValidateSwapResult = (conversionResult: {
+    from: number;
+    to: number;
+  }) => {
+    if (conversionResult.from === 0 || conversionResult.to === 0) {
+      setConfirmSwapError({
+        from: "This can't be empty",
+        to: "This can't be empty",
+      });
+      return false;
+    }
+    return true;
   };
 
   const _handleConfirmSwap = () => {
-    console.log('Ripple effect completed');
-    // Add your function logic here
+    try {
+      setIsConfirmSwapLoading(true);
+      // Call API
+      console.log(`Data: ${conversionResult}`);
+      if (!_onValidateSwapResult(conversionResult)) {
+        _onCloseModalConfirm();
+        return;
+      }
+      // Fake loading
+      setTimeout(() => {
+        setIsConfirmSwapSuccess(true);
+      }, 2000);
+    } catch (error) {
+      setConfirmSwapError({
+        from: (error as Error).message || 'Something went wrong',
+        to: (error as Error).message || 'Something went wrong',
+      });
+    } finally {
+      // Fake loading
+      setTimeout(() => {
+        setIsConfirmSwapLoading(false);
+      }, 2000);
+      setTimeout(() => {
+        setIsConfirmSwapSuccess(false);
+        _onCloseModalConfirm();
+      }, 4000);
+    }
   };
 
   // Function to prevent not allowed characters
-  const _preventNotAllowedCharacters = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const _preventNotAllowedCharacters = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const notAllowedKeys = ['-'];
     if (notAllowedKeys.includes(e.key)) {
       e.preventDefault();
     }
   };
 
-  const open = Boolean(popupAnchor);
-  const id = open ? 'simple-popper' : undefined;
+  const calculateExchangeRate = (fromValue: number, toValue: number) => {
+    const exchangeRateFrom = formatDecimal(fromValue / fromValue);
+    const exchangeRateTo = formatDecimal(fromValue / toValue);
+    return {
+      from: exchangeRateFrom,
+      to: exchangeRateTo,
+    };
+  };
 
+  const exchangeRate = calculateExchangeRate(
+    Number(selectedCurrencies.from.value),
+    Number(selectedCurrencies.to.value)
+  );
   return (
     <MainLayout>
+      <LoadingComponent loading={isCurrencyDataLoading} />
       <div className="container">
         <StyledSwapForm className="swap-form">
           <StyledSwapFormTitle className="swap-form__title">
@@ -167,9 +263,14 @@ function App() {
               <div className="swap-form__cards-item-title">
                 <h3 className="title">Amount to send</h3>
               </div>
-              <StyledFormGroup className="form-group">
+              <StyledFormGroup
+                className="form-group"
+                $error={confirmSwapError.from}
+              >
                 <Select
-                  onChange={(value) => _handleCurrencySelect(value, SwapKey.FROM)}
+                  onChange={(value) =>
+                    _handleCurrencySelect(value, SwapKey.FROM)
+                  }
                   value={selectedCurrencies.from}
                   isSearchable={true}
                   styles={{
@@ -232,10 +333,13 @@ function App() {
                   type="number"
                   inputMode="decimal"
                 />
+                <p className="form-group__error">{confirmSwapError.from}</p>
               </StyledFormGroup>
             </StyledCard>
             <StyledButtonSwap
-              className={`btn btn-swap --circle ${isSwapButtonRotated ? 'rotated' : ''}`}
+              className={`btn btn-swap --circle ${
+                isSwapButtonRotated ? 'rotated' : ''
+              }`}
               onClick={_handleSwap}
             >
               <CgSwap />
@@ -244,7 +348,10 @@ function App() {
               <div className="swap-form__cards-item-title">
                 <h3 className="title">Amount to receive</h3>
               </div>
-              <StyledFormGroup className="form-group">
+              <StyledFormGroup
+                className="form-group"
+                $error={confirmSwapError.to}
+              >
                 <Select
                   onChange={(value) => _handleCurrencySelect(value, SwapKey.TO)}
                   isSearchable={true}
@@ -309,48 +416,126 @@ function App() {
                   type="number"
                   inputMode="decimal"
                 />
+                <p className="form-group__error">{confirmSwapError.to}</p>
               </StyledFormGroup>
             </StyledCard>
           </StyledSwapFormCards>
           <StyledSubmitContainer className="swap-form__submit">
             <StyledButtonSubmit
               className="btn btn-submit"
-              onClick={_handleConfirmSwap}
+              onClick={_onOpenModalConfirm}
             >
               Confirm swap
             </StyledButtonSubmit>
             <StyledSwapFormInfo className="swap-form__submit-info">
-              <StyledSwapFormInfoButton
-                aria-describedby={id}
-                onClick={_handlePopupClick}
-              >
-                <BiInfoCircle />
-              </StyledSwapFormInfoButton>
-              <Popup open={open} anchor={popupAnchor} id={id}>
-                <p>Test</p>
-              </Popup>
+              <ClickAwayListener onClickAway={() => setPopupAnchor(false)}>
+                <StyledPopup>
+                  <StyledSwapFormInfoButton
+                    onMouseEnter={_handlePopupToggle}
+                    onMouseLeave={_handlePopupToggle}
+                  >
+                    <BiInfoCircle />
+                  </StyledSwapFormInfoButton>
+                  {popupAnchor && (
+                    <StyledPopupBody>
+                      <p>
+                        Exchange rate of {selectedCurrencies.from.label} is
+                        based on the date of {selectedCurrencies.from.date}
+                      </p>
+                      <p>
+                        Exchange rate of {selectedCurrencies.to.label} is based
+                        on the date of {selectedCurrencies.to.date}
+                      </p>
+                    </StyledPopupBody>
+                  )}
+                </StyledPopup>
+              </ClickAwayListener>
+
               <p className="info">
                 <span>
                   {selectedCurrencies.from.label}/{selectedCurrencies.to.label}:{' '}
                 </span>
                 <span>
-                  {formatDecimal(
-                    Number(selectedCurrencies.from.value) / Number(selectedCurrencies.from.value)
-                  )}{' '}
-                  {selectedCurrencies.from.label} ={' '}
-                  {formatDecimal(
-                    Number(selectedCurrencies.from.value) / Number(selectedCurrencies.to.value)
-                  )}{' '}
-                  {selectedCurrencies.to.label}
+                  {exchangeRate.from} {selectedCurrencies.from.label} ={' '}
+                  {exchangeRate.to} {selectedCurrencies.to.label}
                 </span>
               </p>
             </StyledSwapFormInfo>
           </StyledSubmitContainer>
         </StyledSwapForm>
       </div>
+      <StyledModal open={isOpenModalConfirm} onClose={_onCloseModalConfirm}>
+        <StyledModalContent className="modal-content">
+          <StyledModalHeader className="modal-content__header">
+            <h2>Confirm swap</h2>
+          </StyledModalHeader>
+          <StyledModalBody className="modal-content__body">
+            <div className="modal-content__body-text">
+              <p>Are you sure you want to swap:</p>
+              <p>
+                {conversionResult.from}{' '}
+                <span>{selectedCurrencies.from.label}</span> to{' '}
+                {conversionResult.to} <span>{selectedCurrencies.to.label}</span>
+              </p>
+            </div>
+          </StyledModalBody>
+          <StyledModalFooter className="modal-content__footer">
+            <StyledButtonBase onClick={_onCloseModalConfirm}>
+              Cancel
+            </StyledButtonBase>
+            <StyledButtonBase onClick={_handleConfirmSwap}>
+              Confirm
+            </StyledButtonBase>
+          </StyledModalFooter>
+          {isConfirmSwapSuccess && (
+            <StyledSuccessWrapper>
+              <StyledSuccess autoplay src={success} />
+            </StyledSuccessWrapper>
+          )}
+          {isConfirmSwapLoading && (
+            <StyledLoadingComponent>
+              <Loader autoplay loop src={loader} />
+            </StyledLoadingComponent>
+          )}
+        </StyledModalContent>
+      </StyledModal>
     </MainLayout>
   );
 }
+
+const Loader = styled(Player)`
+  height: 40%;
+  width: 40%;
+  min-width: 200px;
+  min-height: 200px;
+`;
+
+const StyledLoadingComponent = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.5);
+`;
+
+const StyledSuccessWrapper = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.5);
+`;
+
+const StyledSuccess = styled(Player)`
+  width: 10%;
+  height: 10%;
+`;
 
 const StyledSwapForm = styled.div`
   width: 100%;
@@ -370,6 +555,16 @@ const StyledSwapFormInfo = styled.div`
 
 const StyledSwapFormInfoButton = styled(Button)`
   cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  svg {
+    font-size: 24px;
+    color: #4a90e2;
+  }
 `;
 
 const StyledSwapFormTitle = styled.div`
@@ -485,7 +680,6 @@ const StyledSubmitContainer = styled.div`
   justify-content: center;
   gap: 30px;
   margin-top: 20px;
-  padding-left: 5px;
   .swap-form__submit-info {
     flex: 1;
   }
@@ -495,14 +689,17 @@ const StyledSubmitContainer = styled.div`
   }
 `;
 
-const StyledFormGroup = styled.div`
+const StyledFormGroup = styled.div<{ $error: string }>`
   display: flex;
   align-items: center;
-  border: 1px solid #ededed;
+  border-width: 1px;
+  border-style: solid;
+  border-color: ${({ $error }) => ($error ? 'red' : '#ededed')};
   height: var(--input-height);
   border-radius: 12px;
   background-color: white;
   transition: border-color 0.3s ease-in-out;
+  position: relative;
   &:has(.${inputClasses.focused}) {
     border-color: #4a90e2;
   }
@@ -528,13 +725,83 @@ const StyledFormGroup = styled.div`
       }
     }
   }
+  .form-group__error {
+    color: red;
+    font-size: var(--fs-small);
+    margin-top: 5px;
+    position: absolute;
+    top: 100%;
+    left: 2px;
+    display: ${({ $error }) => ($error ? 'block' : 'none')};
+  }
 `;
 
-const StyledOption = styled.div`
+const StyledPopup = styled.div`
+  position: relative;
+`;
+
+const StyledPopupBody = styled.div`
+  padding: 10px;
+  border: 1px solid #ededed;
+  background-color: white;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  hyphens: auto;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+`;
+
+const StyledModal = styled(Modal)`
+  position: fixed;
+  z-index: 1300;
+  inset: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+`;
+
+const StyledModalContent = styled.div`
+  position: relative;
+  width: 500px;
+  height: 500px;
+  max-height: fit-content;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+`;
+
+const StyledModalHeader = styled.div`
+  padding: 20px;
+  border-bottom: 1px solid #ededed;
+`;
+
+const StyledModalBody = styled.div`
+  padding: 20px;
+  .modal-content__body-text {
+    span {
+      font-family: var(--ff-semibold);
+    }
+  }
+  .modal-content__body-amount {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+`;
+
+const StyledModalFooter = styled.div`
+  padding: 20px;
+  border-top: 1px solid #ededed;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 10px;
-  padding-left: 10px;
 `;
 
 export default App;
