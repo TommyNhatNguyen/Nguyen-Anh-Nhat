@@ -1,50 +1,32 @@
-import { Button, ButtonOwnProps } from '@mui/base';
+import { Button, ButtonOwnProps, buttonClasses } from '@mui/base';
+import LoadingIcon from '@src/components/LoadingIcon';
 import React from 'react';
 import styled from 'styled-components';
 
 type RippleButtonProps = {
-  onClick: () => void;
   children: React.ReactNode;
   className?: string;
-  disableRipple?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
 } & ButtonOwnProps;
 
 const RippleButton: React.FC<RippleButtonProps> = ({
-  onClick,
   children,
   className,
-  disableRipple = false,
+  loading = false,
+  disabled = false,
+  onClick,
   ...props
 }) => {
-  const _onRippleEffect = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (disableRipple) {
-      onClick();
-      return;
-    }
-    const button = event.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const circle = document.createElement('span');
-    const diameter = Math.max(button.clientWidth, button.clientHeight);
-    const radius = diameter / 2;
-
-    circle.style.width = circle.style.height = `${diameter}px`;
-    circle.style.left = `${event.clientX - rect.left - radius}px`;
-    circle.style.top = `${event.clientY - rect.top - radius}px`;
-    circle.classList.add('ripple');
-
-    const ripple = button.getElementsByClassName('ripple')[0];
-
-    if (ripple) {
-      ripple.remove();
-    }
-
-    button.appendChild(circle);
-    // Add event listener for animation end
-    circle.addEventListener('animationend', onClick);
-  };
-
   return (
-    <Button {...props} className={className} onClick={_onRippleEffect}>
+    <Button
+      {...props}
+      disabled={loading || disabled}
+      className={`${className} ${loading ? 'loading' : ''}`}
+      onClick={onClick}
+    >
+      {loading && <LoadingIcon />}
       {children}
     </Button>
   );
@@ -54,30 +36,47 @@ export const StyledButtonBase = styled(RippleButton)`
   position: relative;
   overflow: hidden;
   border-radius: var(--btn-border-radius);
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--btn-border-color);
   height: var(--btn-height);
   padding: var(--btn-padding);
   font-size: var(--btn-font-size);
+  background-color: var(--btn-bg-color);
+  color: var(--btn-text-color);
+  transition: all 0.3s ease-in-out;
   cursor: pointer;
-
-  .ripple {
-    position: absolute;
-    border-radius: 50%;
-    background: var(--btn-ripple-color);
-    transform: scale(0);
-    animation: ripple-animation 600ms linear;
+  &:hover {
+    background-color: var(--btn-hover-bg-color);
   }
-
-  @keyframes ripple-animation {
-    to {
-      transform: scale(5);
-      opacity: 0;
-    }
+  &.loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  &.${buttonClasses.disabled} {
+    background-color: var(--btn-disabled-bg-color);
+    color: var(--btn-disabled-text-color);
+    border-color: var(--btn-disabled-border-color);
+    cursor: not-allowed;
   }
 `;
 
-export const StyledButtonSubmit = styled(StyledButtonBase)`
-  background-color: black;
-  color: var(--btn-text-color);
+export const StyledButtonSecondary = styled(StyledButtonBase)`
+  background-color: var(--btn-secondary-bg-color);
+  color: var(--btn-secondary-text-color);
+  &:hover {
+    background-color: var(--btn-secondary-hover-bg-color);
+  }
+`;
+
+export const StyledButtonOutline = styled(StyledButtonBase)`
+  background-color: transparent;
+  color: var(--text-color);
+  border-color: var(--btn-border-color);
+  &:hover {
+    color: var(--btn-text-color);
+  }
 `;
 
 export default RippleButton;

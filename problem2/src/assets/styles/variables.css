@@ -13,6 +13,7 @@
   --fs-h3: 2.2rem;
   --fs-body: 2rem;
   --fs-small: 1.8rem;
+  --fs-icon: 1.6rem;
   /* Input */
   --input-height: 40px;
   --input-padding: 10px;
@@ -24,31 +25,43 @@
   --btn-border-radius: 12px;
   --btn-font-size: 1.6rem;
   /* Colors */
-  --text-color: #000;
-  --text-color-secondary: #808080;
+  --text-color: #2C2C2C;
+  --text-color-secondary: #6E6E6E;
+  --error-color: #E74C3C;
+  --primary-color: #4a90e2;
+  --secondary-color: #50e3c2;
+  --info-color: #A9A9A9;
+
   --bg-white: #f5f5f5;
   --bg-color: #fff;
-  --card-bg-color: #f5f5f5;
-  --card-border-color: #e0e0e0;
-  --input-bg-color: #f5f5f5;
-  --input-border-color: #e0e0e0;
-  --input-text-color: #000;
-  --input-placeholder-color: #808080;
-  --btn-bg-color: #000;
+
+  --btn-bg-color: #4a90e2;
   --btn-text-color: #fff;
-  --btn-border-color: #e0e0e0;
-  --btn-hover-bg-color: #333;
-  --btn-hover-text-color: #fff;
-  --btn-ripple-color: rgba(255, 255, 255, 0.6);
-  --btn-active-bg-color: #333;
-  --btn-active-text-color: #fff;
-  --btn-disabled-bg-color: #808080;
-  --btn-disabled-text-color: #fff;
+  --btn-hover-bg-color: #3A7AC8;
+  --btn-border-color: #8ABFF1;
+
+  --btn-secondary-bg-color: #50e3c2;
+  --btn-secondary-text-color: #333333;
+  --btn-secondary-hover-bg-color: #3CC4A2;
+
+  --btn-disabled-bg-color: #D3D3D3;
+  --btn-disabled-text-color: #A9A9A9;
   --btn-disabled-border-color: #e0e0e0;
-  --btn-disabled-hover-bg-color: #808080;
-  --btn-disabled-hover-text-color: #fff;
-  --btn-disabled-active-bg-color: #808080;
-  --btn-disabled-active-text-color: #fff;
+
+  --btn-ripple-color: rgba(255, 255, 255, 0.5);
+
+  --backdrop-color: rgba(0, 0, 0, 0.5);
+  --backdrop-color-light: rgba(255, 255, 255, 0.5);
+
+  --modal-bg-color: #fff;
+  --modal-border-color: #E5E5E5;
+
+  --card-border-color: #ededed;
+  --card-background-color: #fff;
+
+  --input-border-color: #ededed;
+  --input-border-color-hover: #4a90e2;
+  --input-border-color-focus: #4a90e2;
 
   /* Responsive Styles */
   @media (max-width: 1440px) {
