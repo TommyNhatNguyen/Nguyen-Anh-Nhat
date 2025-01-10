@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Button, ClickAwayListener } from '@mui/base';
 import { SingleValue } from 'react-select';
 import { CgSwap } from 'react-icons/cg';
 import { StyledButtonBase, StyledButtonOutline } from '@src/components/Button';
@@ -12,6 +11,7 @@ import SuccessIcon from '@src/components/SuccessIcon';
 import ExchangeCard from '@src/pages/HomePage/components/ExchangeCard';
 import { useHomePage } from '@src/pages/HomePage/hooks/useHomePage';
 import PopupComponent from '@src/components/PopupComponent';
+import { SelectedCurrencyType } from '@src/models/price.model';
 function HomePage() {
   const {
     isCurrencyDataLoading,
@@ -40,7 +40,7 @@ function HomePage() {
   };
 
   const _handleCurrencySelect = (
-    value: SingleValue<{ value: number; label: string; date: string }>,
+    value: SingleValue<SelectedCurrencyType>,
     key: SwapKey
   ) => {
     handleCurrencySelect(value, key);
@@ -73,7 +73,7 @@ function HomePage() {
   };
 
   return (
-    <main id="home-page" className="home-page">
+    <StyledHomePage id="home-page" className="home-page">
       <LoadingComponent loading={isCurrencyDataLoading} />
       <div className="container">
         <StyledSwapForm className="swap-form">
@@ -182,9 +182,17 @@ function HomePage() {
           {isConfirmSwapSuccess && <SuccessIcon autoplay={true} />}
         </StyledModalBody>
       </GeneralModal>
-    </main>
+    </StyledHomePage>
   );
 }
+
+const StyledHomePage = styled.main`
+  max-height: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pd-container) 0;
+`;
 
 const StyledModalFooter = styled.div`
   display: flex;
@@ -205,11 +213,13 @@ const StyledModalBody = styled.div`
 const StyledSwapForm = styled.div`
   width: 100%;
   margin: 0 auto;
-  border: 1px solid black;
+  border: 2px solid var(--bg-color);
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 24px;
+  background: var(--bg-white);
+  box-shadow: 24px 24px 48px #d0d0d0, -24px -24px 48px #ffffff;
   position: relative;
-  background-color: #ededed;
+  background-color: var(--bg-white);
 `;
 
 const StyledSwapFormInfo = styled.div`
@@ -240,10 +250,14 @@ const StyledSwapFormTitle = styled.div`
     right: 0;
     bottom: 0;
     z-index: -1;
-    background: linear-gradient(135deg, white, rgba(80, 227, 194, 0.3), white);
+    background: linear-gradient(
+      135deg,
+      var(--bg-color),
+      rgba(80, 227, 194, 0.3),
+      var(--bg-color)
+    );
     background-size: 200%;
     animation: background-animation 2.5s linear infinite;
-    /* animation-direction: alternate; */
     @keyframes background-animation {
       0% {
         background-position: -50% -50%;
@@ -291,6 +305,11 @@ const StyledSwapFormCards = styled.div`
     left: 50%;
     transform: translate(-50%, -50%);
   }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 10px;
+  }
 `;
 
 const StyledButtonSwap = styled(StyledButtonOutline)`
@@ -317,6 +336,13 @@ const StyledButtonSwap = styled(StyledButtonOutline)`
     font-size: 24px;
     color: var(--secondary-color);
   }
+
+  @media (max-width: 768px) {
+    transform: translate(-50%, -50%) rotate(90deg);
+    &.rotated {
+      transform: translate(-50%, -50%) rotate(270deg);
+    }
+  }
 `;
 
 const StyledSubmitContainer = styled.div`
@@ -331,6 +357,11 @@ const StyledSubmitContainer = styled.div`
 
   .btn-submit {
     flex: 1;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 10px;
   }
 `;
 

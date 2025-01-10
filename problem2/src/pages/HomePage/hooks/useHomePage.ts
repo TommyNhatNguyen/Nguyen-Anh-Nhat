@@ -1,5 +1,5 @@
 import { SwapKey } from '@src/constants/swap';
-import { PriceModel } from '@src/models/price.model';
+import { PriceModel, SelectedCurrencyType } from '@src/models/price.model';
 import { priceService } from '@src/services/priceService';
 import { formatDecimal } from '@src/utils/format';
 import { validatePositiveNumber } from '@src/utils/validateNumber';
@@ -24,8 +24,8 @@ export const useHomePage = () => {
     to: number;
   }>({ from: 0, to: 0 });
   const [selectedCurrencies, setSelectedCurrencies] = useState<{
-    from: { value: number; label: string; date: string };
-    to: { value: number; label: string; date: string };
+    from: SelectedCurrencyType;
+    to: SelectedCurrencyType;
   }>({
     from: { value: 0, label: '', date: '' },
     to: { value: 0, label: '', date: '' },
@@ -41,6 +41,11 @@ export const useHomePage = () => {
       [currencyData]
     );
   }, [currencyData]);
+
+  const handleResetConversionResult = () => {
+    setConversionResult({ from: 0, to: 0 });
+    setConfirmSwapError({ from: '', to: '' });
+  };
 
   const fetchCurrencyData = async () => {
     try {
@@ -93,7 +98,7 @@ export const useHomePage = () => {
   };
 
   const handleCurrencySelect = (
-    value: SingleValue<{ value: number; label: string; date: string }>,
+    value: SingleValue<SelectedCurrencyType>,
     key: SwapKey
   ) => {
     setSelectedCurrencies((prev) => ({
@@ -158,6 +163,7 @@ export const useHomePage = () => {
       }, 2000);
       setTimeout(() => {
         setIsConfirmSwapSuccess(false);
+        handleResetConversionResult();
       }, 4000);
       callback();
     }

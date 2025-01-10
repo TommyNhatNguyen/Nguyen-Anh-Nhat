@@ -51,6 +51,7 @@ const StyledModal = styled(Modal)`
   align-items: center;
   justify-content: center;
   background-color: var(--backdrop-color);
+  padding: 10px;
 `;
 
 const StyledModalContent = styled.div`

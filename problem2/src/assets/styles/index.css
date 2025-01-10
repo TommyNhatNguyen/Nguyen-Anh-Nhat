@@ -2,14 +2,17 @@
 @import "./fonts.css";
 @import "./variables.css";
 @import "./components.css";
+
 html {
   font-size: 62.5%;
   font-family: var(--ff-regular);
-  background-color: var(--bg-color);
+  background-color: var(--bg-white);
   color: var(--text-color);
 }
 
 body {
+  width: 100%;
+  height: 100%;
   margin: 0 auto;
   max-width: var(--max-width-page);
   font-size: var(--fs-body);
@@ -17,15 +20,19 @@ body {
 }
 
 .container {
+  width: 100%;
+  height: 100%;
   margin: 0 auto;
   max-width: var(--max-width-container);
-  padding: var(--pd-container);
+  padding: 0 var(--pd-container);
 }
 
 .container-fluid {
+  width: 100%;
+  height: 100%;
   margin: 0 auto;
   max-width: var(--max-width-page);
-  padding: var(--pd-container);
+  padding: 0 var(--pd-container);
 }
 
 h1 {

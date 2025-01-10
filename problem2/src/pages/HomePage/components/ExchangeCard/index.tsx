@@ -1,10 +1,13 @@
 import { Input, inputClasses } from '@mui/base';
-import { IMAGE_URL } from '@src/constants/image';
 import { SwapKey } from '@src/constants/swap';
+import {
+  ConversionResultType,
+  SelectedCurrencyType,
+} from '@src/models/price.model';
 import CurrencySelect from '@src/pages/HomePage/components/CurrencySelect';
 import { preventNotAllowedCharacters } from '@src/utils/preventCharecters';
-import React, { useCallback } from 'react';
-import Select, { components, SingleValue } from 'react-select';
+import React from 'react';
+import { SingleValue } from 'react-select';
 import styled from 'styled-components';
 
 type Props = {
@@ -13,12 +16,12 @@ type Props = {
     value: SingleValue<{ value: number; label: string; date: string }>,
     key: SwapKey
   ) => void;
-  conversionResult: { from: number; to: number };
+  conversionResult: ConversionResultType;
   selectedCurrencies: {
-    from: { value: number; label: string; date: string };
-    to: { value: number; label: string; date: string };
+    from: SelectedCurrencyType;
+    to: SelectedCurrencyType;
   };
-  currencyOptions: { value: number; label: string; date: string }[];
+  currencyOptions: SelectedCurrencyType[];
   handleAmountChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     key: SwapKey
@@ -78,7 +81,7 @@ const ExchangeCard = ({
 const StyledCard = styled.div`
   width: 100%;
   border: 1px solid var(--card-border-color);
-  padding: 12px 20px 24px 20px;
+  padding: 24px 24px 36px 24px;
   border-radius: 12px;
   background-color: var(--card-background-color);
 `;

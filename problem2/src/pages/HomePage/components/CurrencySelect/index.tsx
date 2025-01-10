@@ -2,16 +2,17 @@ import Select, { components, SingleValue } from 'react-select';
 import { SwapKey } from '@src/constants/swap';
 import React from 'react';
 import { IMAGE_URL } from '@src/constants/image';
+import { SelectedCurrencyType } from '@src/models/price.model';
 
 type Props = {
-  currencyOptions: { value: number; label: string; date: string }[];
+  currencyOptions: SelectedCurrencyType[];
   selectedCurrencies: {
-    from: { value: number; label: string; date: string };
-    to: { value: number; label: string; date: string };
+    from: SelectedCurrencyType;
+    to: SelectedCurrencyType;
   };
   swapKey: SwapKey;
   handleSelectCurrency: (
-    value: SingleValue<{ value: number; label: string; date: string }>,
+    value: SingleValue<SelectedCurrencyType>,
     key: SwapKey
   ) => void;
 };
@@ -23,7 +24,7 @@ const CurrencySelect = ({
   handleSelectCurrency,
 }: Props) => {
   const _onCurrencySelect = (
-    value: SingleValue<{ value: number; label: string; date: string }>,
+    value: SingleValue<SelectedCurrencyType>,
     key: SwapKey
   ) => {
     handleSelectCurrency(value, key);
